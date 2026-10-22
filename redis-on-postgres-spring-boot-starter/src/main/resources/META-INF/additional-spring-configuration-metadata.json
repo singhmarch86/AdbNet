@@ -1,0 +1,28 @@
+{
+  "properties": [
+    {
+      "name": "pgredis.table-prefix",
+      "type": "java.lang.String",
+      "description": "Prefix applied to every backing table (mr_kv, mr_counter, mr_zset).",
+      "defaultValue": "mr_"
+    },
+    {
+      "name": "pgredis.initialize-on-startup",
+      "type": "java.lang.Boolean",
+      "description": "Create tables and indexes on bean startup.",
+      "defaultValue": true
+    },
+    {
+      "name": "pgredis.ttl-check-on-read",
+      "type": "java.lang.Boolean",
+      "description": "Re-check expire_at on every read and treat an expired row as absent.",
+      "defaultValue": true
+    },
+    {
+      "name": "pgredis.ttl-sweep-seconds",
+      "type": "java.lang.Long",
+      "description": "Interval for the background sweeper deleting expired rows. 0 disables it.",
+      "defaultValue": 60
+    }
+  ]
+}
