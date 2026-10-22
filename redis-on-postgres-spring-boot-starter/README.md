@@ -96,10 +96,15 @@ class Example {
 ## Build & test
 
 ```bash
-mvn -q test   # context smoke tests, no live PostgreSQL needed
+mvn -q test   # context + dialect-SQL tests (always) + Testcontainers integration tests (if Docker is up)
 ```
 
-Integration tests (real TTL/pub-sub) run against Testcontainers' `PostgreSQLContainer`.
+`PgRedisPostgresIntegrationTest` and `PgRedisMySqlIntegrationTest` share one set of
+assertions (`AbstractSqlRedisIntegrationTest`) and run it against a real
+`PostgreSQLContainer` and `MySQLContainer` respectively — covering KV/TTL, counters,
+sorted sets, and both pub/sub strategies (LISTEN/NOTIFY and table-polling). Both are
+`@Testcontainers(disabledWithoutDocker = true)`, so they run where Docker is available
+and are **skipped** otherwise.
 
 ## Dialects (PostgreSQL + MySQL)
 

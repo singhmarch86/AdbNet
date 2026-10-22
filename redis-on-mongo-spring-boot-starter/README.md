@@ -98,11 +98,14 @@ These are intentional and documented — do not assume Redis parity:
 ## Build & test
 
 ```bash
-mvn -q test   # context smoke tests, no live MongoDB needed
+mvn -q test   # context smoke tests (always) + Testcontainers integration tests (if Docker is up)
 ```
 
-Integration tests against pub/sub / TTL require a replica-set MongoDB (e.g. a
-Testcontainers `MongoDBContainer` started as a replica set).
+`MongoRedisIntegrationTest` exercises KV/TTL, counters, sorted sets, and Change-Stream
+pub/sub against a real `MongoDBContainer` (single-node replica set). It is annotated
+`@Testcontainers(disabledWithoutDocker = true)`, so it runs automatically where Docker
+is available (CI, dev machines) and is **skipped** otherwise — the build stays green
+either way.
 
 ## Status
 
