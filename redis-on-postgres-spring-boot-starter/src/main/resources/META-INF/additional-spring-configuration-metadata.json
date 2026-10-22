@@ -1,9 +1,15 @@
 {
   "properties": [
     {
+      "name": "pgredis.dialect",
+      "type": "java.lang.String",
+      "description": "SQL dialect: auto (detect from the connection), postgresql, or mysql.",
+      "defaultValue": "auto"
+    },
+    {
       "name": "pgredis.table-prefix",
       "type": "java.lang.String",
-      "description": "Prefix applied to every backing table (mr_kv, mr_counter, mr_zset).",
+      "description": "Prefix applied to every backing table (mr_kv, mr_counter, mr_zset, mr_events).",
       "defaultValue": "mr_"
     },
     {
@@ -23,6 +29,12 @@
       "type": "java.lang.Long",
       "description": "Interval for the background sweeper deleting expired rows. 0 disables it.",
       "defaultValue": 60
+    },
+    {
+      "name": "pgredis.pub-sub-poll-ms",
+      "type": "java.lang.Long",
+      "description": "Poll interval for table-based pub/sub (dialects without native pub/sub).",
+      "defaultValue": 500
     }
   ]
 }

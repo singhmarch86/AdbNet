@@ -3,13 +3,19 @@ package io.pgredis;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration for the Redis-on-PostgreSQL starter.
+ * Configuration for the Redis-on-SQL starter.
  * Bound from properties prefixed with {@code pgredis.*}.
  */
 @ConfigurationProperties(prefix = "pgredis")
 public class PgRedisProperties {
 
-    /** Prefix applied to every backing table (mr_kv, mr_counter, mr_zset). */
+    /**
+     * SQL dialect: {@code auto} (detect from the connection), {@code postgresql},
+     * or {@code mysql} (also covers MariaDB).
+     */
+    private String dialect = "auto";
+
+    /** Prefix applied to every backing table (mr_kv, mr_counter, mr_zset, mr_events). */
     private String tablePrefix = "mr_";
 
     /** Create tables and indexes on bean startup. */
@@ -20,9 +26,20 @@ public class PgRedisProperties {
 
     /**
      * Interval in seconds for the background TTL sweeper that deletes expired
-     * rows (PostgreSQL has no native TTL). 0 disables the sweeper.
+     * rows (SQL databases have no native TTL). 0 disables the sweeper.
      */
     private long ttlSweepSeconds = 60;
+
+    /** Poll interval in milliseconds for table-based pub/sub (dialects without native pub/sub). */
+    private long pubSubPollMs = 500;
+
+    public String getDialect() {
+        return dialect;
+    }
+
+    public void setDialect(String dialect) {
+        this.dialect = dialect;
+    }
 
     public String getTablePrefix() {
         return tablePrefix;
@@ -54,5 +71,13 @@ public class PgRedisProperties {
 
     public void setTtlSweepSeconds(long ttlSweepSeconds) {
         this.ttlSweepSeconds = ttlSweepSeconds;
+    }
+
+    public long getPubSubPollMs() {
+        return pubSubPollMs;
+    }
+
+    public void setPubSubPollMs(long pubSubPollMs) {
+        this.pubSubPollMs = pubSubPollMs;
     }
 }

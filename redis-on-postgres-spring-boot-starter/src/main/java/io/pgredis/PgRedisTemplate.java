@@ -1,95 +1,80 @@
 package io.pgredis;
 
-import io.pgredis.codec.JacksonValueCodec;
 import io.pgredis.codec.ValueCodec;
-import org.postgresql.PGConnection;
-import org.postgresql.PGNotification;
+import io.pgredis.dialect.SqlDialect;
+import io.pgredis.pubsub.PubSub;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 /**
- * Redis-style primitives backed by PostgreSQL. Same API surface as the
- * MongoDB variant, so the two are interchangeable from the application's view.
+ * Redis-style primitives backed by a relational database. Data-structure SQL
+ * that varies between databases is delegated to a {@link SqlDialect}; pub/sub
+ * is delegated to a {@link PubSub} strategy. Portable statements live here.
  *
- * <p>Pub/sub uses native {@code LISTEN}/{@code NOTIFY}; TTL is emulated with an
- * {@code expire_at} column plus a background sweeper (Postgres has no native TTL).
+ * <p>Same API surface as the MongoDB variant, so backends are interchangeable.
  */
 public class PgRedisTemplate implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(PgRedisTemplate.class);
-    private static final Pattern CHANNEL = Pattern.compile("[A-Za-z0-9_]+");
 
-    private final DataSource dataSource;
     private final JdbcTemplate jdbc;
     private final PgRedisProperties props;
     private final ValueCodec codec;
+    private final SqlDialect dialect;
+    private final PubSub pubSub;
 
     private final String kv;
     private final String counter;
     private final String zset;
+    private final String events;
 
     private final ScheduledExecutorService scheduler =
-            Executors.newSingleThreadScheduledExecutor(daemon("pgredis-sweeper"));
-    private final ScheduledExecutorService subscribers =
-            Executors.newScheduledThreadPool(2, daemon("pgredis-sub"));
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "pgredis-sweeper");
+                t.setDaemon(true);
+                return t;
+            });
 
-    public PgRedisTemplate(DataSource dataSource, PgRedisProperties props) {
-        this(dataSource, props, new JacksonValueCodec());
-    }
-
-    public PgRedisTemplate(DataSource dataSource, PgRedisProperties props, ValueCodec codec) {
-        this.dataSource = dataSource;
-        this.jdbc = new JdbcTemplate(dataSource);
+    public PgRedisTemplate(JdbcTemplate jdbc, PgRedisProperties props, ValueCodec codec,
+                           SqlDialect dialect, PubSub pubSub) {
+        this.jdbc = jdbc;
         this.props = props;
         this.codec = codec;
+        this.dialect = dialect;
+        this.pubSub = pubSub;
         String p = props.getTablePrefix();
         this.kv = p + "kv";
         this.counter = p + "counter";
         this.zset = p + "zset";
+        this.events = p + "events";
     }
 
-    private static java.util.concurrent.ThreadFactory daemon(String name) {
-        return r -> {
-            Thread t = new Thread(r, name);
-            t.setDaemon(true);
-            return t;
-        };
+    public SqlDialect dialect() {
+        return dialect;
     }
 
     // ------------------------------------------------------------------
-    // Initialization: schema + TTL sweeper
+    // Initialization: schema (dialect) + TTL sweeper (portable)
     // ------------------------------------------------------------------
 
     public void init() {
-        jdbc.execute("CREATE TABLE IF NOT EXISTS " + kv
-                + " (key TEXT PRIMARY KEY, value TEXT, expire_at TIMESTAMPTZ)");
-        jdbc.execute("CREATE INDEX IF NOT EXISTS " + kv + "_expire_idx ON " + kv + " (expire_at)");
-        jdbc.execute("CREATE TABLE IF NOT EXISTS " + counter
-                + " (key TEXT PRIMARY KEY, n BIGINT NOT NULL DEFAULT 0)");
-        jdbc.execute("CREATE TABLE IF NOT EXISTS " + zset
-                + " (k TEXT, m TEXT, score DOUBLE PRECISION NOT NULL, PRIMARY KEY (k, m))");
-        jdbc.execute("CREATE INDEX IF NOT EXISTS " + zset + "_k_score_idx ON " + zset + " (k, score)");
-
+        for (String ddl : dialect.ddl(kv, counter, zset, events)) {
+            jdbc.execute(ddl);
+        }
         if (props.getTtlSweepSeconds() > 0) {
             long s = props.getTtlSweepSeconds();
             scheduler.scheduleAtFixedRate(this::sweepExpired, s, s, TimeUnit.SECONDS);
         }
-        log.info("pgredis initialized (prefix={})", props.getTablePrefix());
+        log.info("pgredis initialized (dialect={}, prefix={})", dialect.id(), props.getTablePrefix());
     }
 
     private void sweepExpired() {
@@ -110,14 +95,12 @@ public class PgRedisTemplate implements AutoCloseable {
 
     public void set(String key, Object value, Duration ttl) {
         Timestamp expireAt = ttl == null ? null : Timestamp.from(Instant.now().plus(ttl));
-        jdbc.update("INSERT INTO " + kv + " (key, value, expire_at) VALUES (?, ?, ?) "
-                        + "ON CONFLICT (key) DO UPDATE SET value = excluded.value, expire_at = excluded.expire_at",
-                key, codec.encode(value), expireAt);
+        jdbc.update(dialect.upsertKv(kv), key, codec.encode(value), expireAt);
     }
 
     public String get(String key) {
         List<String[]> rows = jdbc.query(
-                "SELECT value, expire_at FROM " + kv + " WHERE key = ?",
+                "SELECT value, expire_at FROM " + kv + " WHERE rkey = ?",
                 (rs, i) -> new String[] {
                         rs.getString(1),
                         rs.getTimestamp(2) == null ? null : rs.getTimestamp(2).toInstant().toString()
@@ -138,7 +121,7 @@ public class PgRedisTemplate implements AutoCloseable {
     }
 
     public boolean del(String key) {
-        return jdbc.update("DELETE FROM " + kv + " WHERE key = ?", key) > 0;
+        return jdbc.update("DELETE FROM " + kv + " WHERE rkey = ?", key) > 0;
     }
 
     public boolean exists(String key) {
@@ -151,13 +134,13 @@ public class PgRedisTemplate implements AutoCloseable {
 
     public boolean expire(String key, Duration ttl) {
         Timestamp expireAt = Timestamp.from(Instant.now().plus(ttl));
-        return jdbc.update("UPDATE " + kv + " SET expire_at = ? WHERE key = ?", expireAt, key) > 0;
+        return jdbc.update("UPDATE " + kv + " SET expire_at = ? WHERE rkey = ?", expireAt, key) > 0;
     }
 
     /** -2 if key missing/expired, -1 if no expiry, else remaining seconds. */
     public long ttl(String key) {
         List<Timestamp> rows = jdbc.query(
-                "SELECT expire_at FROM " + kv + " WHERE key = ?",
+                "SELECT expire_at FROM " + kv + " WHERE rkey = ?",
                 (rs, i) -> rs.getTimestamp(1), key);
         if (rows.isEmpty()) {
             return -2;
@@ -174,7 +157,7 @@ public class PgRedisTemplate implements AutoCloseable {
     }
 
     // ------------------------------------------------------------------
-    // Counters (atomic upsert)
+    // Counters
     // ------------------------------------------------------------------
 
     public long incr(String key) {
@@ -186,11 +169,7 @@ public class PgRedisTemplate implements AutoCloseable {
     }
 
     public long incrBy(String key, long n) {
-        Long value = jdbc.queryForObject(
-                "INSERT INTO " + counter + " (key, n) VALUES (?, ?) "
-                        + "ON CONFLICT (key) DO UPDATE SET n = " + counter + ".n + excluded.n RETURNING n",
-                Long.class, key, n);
-        return value == null ? 0L : value;
+        return dialect.incrBy(jdbc, counter, key, n);
     }
 
     // ------------------------------------------------------------------
@@ -198,9 +177,7 @@ public class PgRedisTemplate implements AutoCloseable {
     // ------------------------------------------------------------------
 
     public void zAdd(String key, String member, double score) {
-        jdbc.update("INSERT INTO " + zset + " (k, m, score) VALUES (?, ?, ?) "
-                        + "ON CONFLICT (k, m) DO UPDATE SET score = excluded.score",
-                key, member, score);
+        jdbc.update(dialect.upsertZset(zset), key, member, score);
     }
 
     public Double zScore(String key, String member) {
@@ -225,11 +202,10 @@ public class PgRedisTemplate implements AutoCloseable {
     private List<Z> range(String key, int start, int stop, boolean asc) {
         int skip = Math.max(start, 0);
         if (stop >= 0 && (stop - skip + 1) <= 0) {
-            return new ArrayList<>();
+            return List.of();
         }
-        String limit = (stop < 0) ? "ALL" : String.valueOf(stop - skip + 1);
-        String sql = "SELECT m, score FROM " + zset + " WHERE k = ? ORDER BY score "
-                + (asc ? "ASC" : "DESC") + " OFFSET " + skip + " LIMIT " + limit;
+        int limit = (stop < 0) ? -1 : (stop - skip + 1);
+        String sql = dialect.rangeSql(zset, skip, limit, asc);
         return jdbc.query(sql, (rs, i) -> new Z(rs.getString(1), rs.getDouble(2)), key);
     }
 
@@ -244,90 +220,20 @@ public class PgRedisTemplate implements AutoCloseable {
     }
 
     // ------------------------------------------------------------------
-    // Pub / Sub (native LISTEN / NOTIFY)
+    // Pub / Sub (delegated to the configured strategy)
     // ------------------------------------------------------------------
 
-    /** PUBLISH channel payload. Payload is limited to 8000 bytes by PostgreSQL. */
     public void publish(String channel, String payload) {
-        requireValidChannel(channel);
-        jdbc.queryForObject("SELECT pg_notify(?, ?)", String.class, channel, payload);
+        pubSub.publish(channel, payload);
     }
 
-    /** SUBSCRIBE channel — holds a dedicated connection for the subscription's life. */
     public Subscription subscribe(String channel, MessageListener listener) {
-        requireValidChannel(channel);
-        AtomicBoolean active = new AtomicBoolean(true);
-        final Connection conn;
-        try {
-            conn = dataSource.getConnection();
-            PGConnection pg = conn.unwrap(PGConnection.class);
-            try (Statement st = conn.createStatement()) {
-                st.execute("LISTEN \"" + channel + "\"");
-            }
-            subscribers.submit(() -> pump(channel, listener, active, conn, pg));
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to subscribe to '" + channel + "'", e);
-        }
-
-        return new Subscription() {
-            @Override
-            public String channel() {
-                return channel;
-            }
-
-            @Override
-            public boolean isActive() {
-                return active.get();
-            }
-
-            @Override
-            public void close() {
-                active.set(false);
-                closeQuietly(conn);
-            }
-        };
-    }
-
-    private void pump(String channel, MessageListener listener, AtomicBoolean active,
-                      Connection conn, PGConnection pg) {
-        try {
-            while (active.get()) {
-                PGNotification[] notes = pg.getNotifications(500);
-                if (notes != null) {
-                    for (PGNotification n : notes) {
-                        listener.onMessage(n.getName(), n.getParameter());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            if (active.get()) {
-                log.warn("subscription to '{}' ended: {}", channel, e.getMessage());
-            }
-        } finally {
-            closeQuietly(conn);
-        }
-    }
-
-    private static void requireValidChannel(String channel) {
-        if (channel == null || !CHANNEL.matcher(channel).matches()) {
-            throw new IllegalArgumentException(
-                    "Channel must match [A-Za-z0-9_]+ (got: " + channel + ")");
-        }
-    }
-
-    private static void closeQuietly(Connection conn) {
-        try {
-            if (conn != null && !conn.isClosed()) {
-                conn.close();
-            }
-        } catch (Exception ignore) {
-            // best effort
-        }
+        return pubSub.subscribe(channel, listener);
     }
 
     @Override
     public void close() {
         scheduler.shutdownNow();
-        subscribers.shutdownNow();
+        pubSub.close();
     }
 }

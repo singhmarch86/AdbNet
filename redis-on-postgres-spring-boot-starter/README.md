@@ -18,7 +18,10 @@ drop-in interchangeable.
 </dependency>
 ```
 
-Needs a `DataSource` (from `spring-boot-starter-jdbc`) and the PostgreSQL driver.
+Needs a `DataSource` (from `spring-boot-starter-jdbc`) and your database's JDBC
+driver — the **PostgreSQL** driver (`org.postgresql:postgresql`) or the
+**MySQL/MariaDB** driver (`com.mysql:mysql-connector-j`). The dialect is detected
+from the live connection, or set it explicitly with `pgredis.dialect`.
 
 ## Configure
 
@@ -30,10 +33,12 @@ spring:
     password: secret
 
 pgredis:
-  table-prefix: "mr_"        # mr_kv, mr_counter, mr_zset
+  dialect: auto              # auto | postgresql | mysql
+  table-prefix: "mr_"        # mr_kv, mr_counter, mr_zset, mr_events
   initialize-on-startup: true
   ttl-check-on-read: true
   ttl-sweep-seconds: 60      # background deletion of expired rows; 0 disables
+  pub-sub-poll-ms: 500       # poll interval for table-based pub/sub (MySQL path)
 ```
 
 ## Use
@@ -96,22 +101,31 @@ mvn -q test   # context smoke tests, no live PostgreSQL needed
 
 Integration tests (real TTL/pub-sub) run against Testcontainers' `PostgreSQLContainer`.
 
-## Extending to other relational databases
+## Dialects (PostgreSQL + MySQL)
 
-The SQL used here is *mostly* portable; two things are dialect-specific and would move
-behind a small `SqlDialect` seam in a future version:
+Database-specific SQL lives behind two seams, so the same `PgRedisTemplate` runs on
+either database:
 
-| Concern        | PostgreSQL        | MySQL / MariaDB               | H2 / others |
-|----------------|-------------------|-------------------------------|-------------|
-| Upsert         | `ON CONFLICT ... DO UPDATE` | `ON DUPLICATE KEY UPDATE` | `MERGE` |
-| Counter return | `RETURNING n`     | second `SELECT` in a txn      | `RETURNING` (H2) |
-| Pub/Sub        | `LISTEN`/`NOTIFY` (native) | **none** — poll a message table or use an external bus | none |
+- **`io.pgredis.dialect.SqlDialect`** — upsert syntax, atomic counters, range
+  pagination, and DDL. Implementations: `PostgresDialect`, `MySqlDialect`.
+- **`io.pgredis.pubsub.PubSub`** — `PostgresPubSub` (native `LISTEN`/`NOTIFY`) and
+  `PollingPubSub` (a polled `mr_events` table, for databases without native pub/sub).
 
-So KV/TTL, counters, and sorted sets port cleanly to MySQL with just an upsert-dialect
-swap. Pub/sub is the only piece without a native MySQL equivalent — there it falls back
-to a polled `mr_events` table (the same shape as the MongoDB capped-collection approach).
+| Concern        | `PostgresDialect`           | `MySqlDialect`                       |
+|----------------|-----------------------------|--------------------------------------|
+| Upsert         | `ON CONFLICT ... DO UPDATE` | `ON DUPLICATE KEY UPDATE`            |
+| Counter        | `... RETURNING n`           | upsert + `SELECT` in one transaction |
+| Range limit    | `LIMIT ALL`                 | `LIMIT <max> OFFSET <n>`             |
+| Key column     | `rkey TEXT`                 | `rkey VARCHAR(255)` (avoids reserved `key`) |
+| Pub/Sub        | native `LISTEN`/`NOTIFY`    | polled `mr_events` table             |
+
+**Adding another database** (H2, SQL Server, …) means one new `SqlDialect` (and, if it
+lacks native pub/sub, reuse `PollingPubSub`). Register it in
+`PgRedisAutoConfiguration#resolveDialect`.
 
 ## Status
 
-`0.1.0-SNAPSHOT` — scaffold, v1 scope. Next: the `SqlDialect` seam + a MySQL dialect,
-and the Testcontainers integration suite shared with the MongoDB module.
+`0.1.0-SNAPSHOT` — v1 scope, with PostgreSQL and MySQL dialects. `mvn test` passes 6/6
+(context wiring + pure dialect-SQL tests). Next: a Testcontainers integration suite
+(real TTL/pub-sub against `PostgreSQLContainer` and `MySQLContainer`), shared with the
+MongoDB module.

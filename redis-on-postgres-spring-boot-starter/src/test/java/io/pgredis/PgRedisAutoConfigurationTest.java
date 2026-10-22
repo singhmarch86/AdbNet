@@ -11,8 +11,8 @@ import static org.mockito.Mockito.mock;
 
 /**
  * Context smoke test: the starter registers a {@link PgRedisTemplate} when a
- * {@link DataSource} is present and honours property binding. Schema init is
- * disabled so no live PostgreSQL is required.
+ * {@link DataSource} is present and honours property binding. An explicit
+ * dialect avoids connecting, so no live database is required.
  */
 class PgRedisAutoConfigurationTest {
 
@@ -21,11 +21,22 @@ class PgRedisAutoConfigurationTest {
             .withPropertyValues("pgredis.initialize-on-startup=false");
 
     @Test
-    void registersTemplateWhenDataSourcePresent() {
-        runner.withBean(DataSource.class, () -> mock(DataSource.class))
+    void registersPostgresTemplate() {
+        runner.withPropertyValues("pgredis.dialect=postgresql")
+                .withBean(DataSource.class, () -> mock(DataSource.class))
                 .run(context -> {
                     assertThat(context).hasSingleBean(PgRedisTemplate.class);
-                    assertThat(context).hasSingleBean(io.pgredis.codec.ValueCodec.class);
+                    assertThat(context.getBean(PgRedisTemplate.class).dialect().id()).isEqualTo("postgresql");
+                });
+    }
+
+    @Test
+    void registersMySqlTemplate() {
+        runner.withPropertyValues("pgredis.dialect=mysql")
+                .withBean(DataSource.class, () -> mock(DataSource.class))
+                .run(context -> {
+                    assertThat(context).hasSingleBean(PgRedisTemplate.class);
+                    assertThat(context.getBean(PgRedisTemplate.class).dialect().id()).isEqualTo("mysql");
                 });
     }
 
@@ -36,8 +47,9 @@ class PgRedisAutoConfigurationTest {
 
     @Test
     void bindsProperties() {
-        runner.withBean(DataSource.class, () -> mock(DataSource.class))
-                .withPropertyValues("pgredis.table-prefix=rc_", "pgredis.ttl-sweep-seconds=15")
+        runner.withPropertyValues("pgredis.dialect=postgresql",
+                        "pgredis.table-prefix=rc_", "pgredis.ttl-sweep-seconds=15")
+                .withBean(DataSource.class, () -> mock(DataSource.class))
                 .run(context -> {
                     PgRedisProperties props = context.getBean(PgRedisProperties.class);
                     assertThat(props.getTablePrefix()).isEqualTo("rc_");
