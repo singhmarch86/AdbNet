@@ -1,0 +1,34 @@
+{
+  "properties": [
+    {
+      "name": "mongoredis.database",
+      "type": "java.lang.String",
+      "description": "MongoDB database the primitives live in.",
+      "defaultValue": "mongoredis"
+    },
+    {
+      "name": "mongoredis.collection-prefix",
+      "type": "java.lang.String",
+      "description": "Prefix applied to every backing collection (mr_kv, mr_zset, mr_events).",
+      "defaultValue": "mr_"
+    },
+    {
+      "name": "mongoredis.initialize-on-startup",
+      "type": "java.lang.Boolean",
+      "description": "Create indexes and capped collections on bean startup.",
+      "defaultValue": true
+    },
+    {
+      "name": "mongoredis.ttl-check-on-read",
+      "type": "java.lang.Boolean",
+      "description": "Re-check expireAt on every read and treat a logically expired document as absent.",
+      "defaultValue": true
+    },
+    {
+      "name": "mongoredis.capped-events-size-bytes",
+      "type": "java.lang.Long",
+      "description": "Size in bytes of the capped collection backing pub/sub.",
+      "defaultValue": 16777216
+    }
+  ]
+}
