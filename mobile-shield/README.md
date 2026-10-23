@@ -40,8 +40,11 @@ their knowledge**. It is not built to covertly monitor another adult.
   on any host. Apple (`iosX64`/`iosArm64`/`iosSimulatorArm64`) targets are
   declared on a macOS host, where the iOS framework is produced.
 - `androidApp/` — the Android shell: a local `VpnService` DNS filter wired to
-  the shared matcher, a Compose UI (filter toggle + UPI checker), and share-to-
-  check for UPI links. Kotlin.
+  the shared matcher, and a Compose UI with two tabs — **Protect** (filter
+  toggle + UPI checker, plus share-to-check for UPI links) and **Checkup**,
+  which collects installed apps and downloaded APKs via `PackageManager` /
+  `MediaStore` and runs them through the shared hygiene + APK analyzers.
+  Kotlin.
 - `iosApp/` — the iOS shell: a SwiftUI app and a NetworkExtension DNS proxy,
   both calling the shared `core` framework. Swift.
 

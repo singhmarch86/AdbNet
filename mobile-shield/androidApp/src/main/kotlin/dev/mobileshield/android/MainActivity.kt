@@ -22,6 +22,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,7 +55,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    ShieldScreen(analyzer = analyzer, initialLink = shared)
+                    App(analyzer = analyzer, initialLink = shared)
                 }
             }
         }
@@ -67,7 +69,22 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ShieldScreen(analyzer: UpiLinkAnalyzer, initialLink: String) {
+private fun App(analyzer: UpiLinkAnalyzer, initialLink: String) {
+    var tab by remember { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = tab) {
+            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Protect") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Checkup") })
+        }
+        when (tab) {
+            0 -> ProtectTab(analyzer = analyzer, initialLink = initialLink)
+            else -> CheckupTab()
+        }
+    }
+}
+
+@Composable
+private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
     val context = LocalContext.current
     var filtering by remember { mutableStateOf(false) }
     var link by remember { mutableStateOf(initialLink) }

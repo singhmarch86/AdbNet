@@ -6,6 +6,19 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Device-hygiene checkup: enumerate installed apps to flag risky ones.
+         QUERY_ALL_PACKAGES is a sensitive permission; it is justified here for a
+         security app and must be declared to the Play Store. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <!-- Downloaded-APK scan: read the public Downloads folder. On API <= 32
+         this permission is enough; on 33+ full coverage of other apps'
+         downloads needs MANAGE_EXTERNAL_STORAGE, which we deliberately do NOT
+         request (the scan is then limited to what scoped storage exposes). -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"
