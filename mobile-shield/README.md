@@ -12,8 +12,13 @@ their knowledge**. It is not built to covertly monitor another adult.
 2. **UPI scam protection** — inspects a UPI link / QR *before* you act on it and
    warns about collect (pull-money) requests, malformed or unknown payee
    handles, high amounts, scam-bait notes, and tampered links.
-3. *(later)* Device-hygiene warnings — flag sideloaded apps holding SMS /
-   overlay / accessibility permissions, and active screen-sharing/remote tools.
+3. **Device-hygiene warnings** — flag screen-sharing/remote-access apps, apps
+   with an enabled accessibility service, and sideloaded apps holding SMS /
+   overlay / device-admin / notification-listener / installer powers.
+4. **Downloaded-APK scanner** — warn about APKs in Downloads before you
+   sideload them: disguised `document.pdf.apk` names, unsigned packages,
+   dangerous requested permissions, tiny droppers, MIME mismatches, brand
+   impersonation, and unknown download sources.
 
 ## What it honestly cannot do
 
