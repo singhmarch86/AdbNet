@@ -60,14 +60,23 @@ class DNSProxyProvider: NEDNSProxyProvider {
             return
         }
 
-        let action = matcher.decide(rawHost: question.name).action
-        if action == FilterAction.block {
+        let decision = matcher.decide(rawHost: question.name)
+        switch decision.action {
+        case .block:
             if let nx = DnsMessage.shared.buildNxDomainResponse(query: packet) {
                 udp.writeDatagrams([nx.toData()], sentBy: [endpoint]) { _ in }
                 return
             }
+        case .rewrite:
+            // SafeSearch: answer with a CNAME to the safe host.
+            if let target = decision.rewriteTo,
+               let cname = DnsMessage.shared.buildCnameResponse(query: packet, canonicalName: target, ttlSeconds: 60) {
+                udp.writeDatagrams([cname.toData()], sentBy: [endpoint]) { _ in }
+                return
+            }
+        default:
+            break
         }
-        // ALLOW / REWRITE (REWRITE CNAME handling is a follow-up, as on Android)
         forward(data, endpoint: endpoint, udp: udp)
     }
 

@@ -1,5 +1,7 @@
 package dev.mobileshield.core.dns
 
+import dev.mobileshield.core.util.Idna
+
 /**
  * Just enough DNS wire-format handling for the on-device filter: read the
  * queried name out of a request, and synthesize the two responses the filter
@@ -16,11 +18,13 @@ package dev.mobileshield.core.dns
  */
 object DnsMessage {
     const val TYPE_A = 1
+    const val TYPE_CNAME = 5
     const val TYPE_AAAA = 28
     const val CLASS_IN = 1
 
     private const val HEADER_LEN = 12
     private const val MAX_NAME_LEN = 255
+    private const val MAX_LABEL_LEN = 63
 
     data class Question(
         val name: String,
@@ -98,6 +102,55 @@ object DnsMessage {
         ipv4.copyInto(answer, 12)
 
         return header + answer
+    }
+
+    /**
+     * Builds a response answering [query] with a single CNAME record pointing
+     * the queried name at [canonicalName] for [ttlSeconds]. This is how the
+     * filter enforces SafeSearch: `google.com` is answered with a CNAME to
+     * `forcesafesearch.google.com`, which the client then resolves (and which
+     * the filter allows). Returns null if the query is invalid or
+     * [canonicalName] does not encode to a valid DNS name.
+     */
+    fun buildCnameResponse(query: ByteArray, canonicalName: String, ttlSeconds: Int = 60): ByteArray? {
+        val q = parseFirstQuestion(query) ?: return null
+        val rdata = encodeName(canonicalName) ?: return null
+
+        val header = query.copyOf(q.endOffset)
+        writeResponseHeaderFlags(header, rcode = 0)
+        setCounts(header, answers = 1)
+
+        val answer = ByteArray(12 + rdata.size)
+        answer[0] = 0xC0.toByte(); answer[1] = 0x0C // name pointer to the question
+        putU16(answer, 2, TYPE_CNAME)
+        putU16(answer, 4, CLASS_IN)
+        answer[6] = (ttlSeconds ushr 24).toByte()
+        answer[7] = (ttlSeconds ushr 16).toByte()
+        answer[8] = (ttlSeconds ushr 8).toByte()
+        answer[9] = ttlSeconds.toByte()
+        putU16(answer, 10, rdata.size)
+        rdata.copyInto(answer, 12)
+
+        return header + answer
+    }
+
+    /**
+     * Encodes a host name into DNS wire format — each label length-prefixed,
+     * terminated by a zero root label. The name is first normalized to ASCII
+     * (IDN/punycode). Returns null if any label is empty or over 63 bytes.
+     */
+    internal fun encodeName(name: String): ByteArray? {
+        val ascii = Idna.toAscii(name.trim().trimEnd('.'))
+        if (ascii.isEmpty()) return null
+        val out = ArrayList<Byte>(ascii.length + 2)
+        for (label in ascii.split('.')) {
+            val bytes = label.encodeToByteArray()
+            if (bytes.isEmpty() || bytes.size > MAX_LABEL_LEN) return null
+            out.add(bytes.size.toByte())
+            for (b in bytes) out.add(b)
+        }
+        out.add(0)
+        return out.toByteArray()
     }
 
     // QR=1, RD copied from query, RA=1, plus the given rcode (0..15).

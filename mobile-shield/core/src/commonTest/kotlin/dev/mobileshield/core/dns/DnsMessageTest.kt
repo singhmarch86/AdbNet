@@ -84,4 +84,57 @@ class DnsMessageTest {
     fun `a response rejects non-ipv4`() {
         assertNull(DnsMessage.buildAResponse(query("x.com"), byteArrayOf(1, 2, 3)))
     }
+
+    /** Decodes a length-prefixed DNS name (no compression) starting at [offset]. */
+    private fun decodeName(b: ByteArray, offset: Int): String {
+        val labels = ArrayList<String>()
+        var i = offset
+        while (true) {
+            val len = b[i].toInt() and 0xFF
+            i++
+            if (len == 0) break
+            labels.add(b.decodeToString(i, i + len))
+            i += len
+        }
+        return labels.joinToString(".")
+    }
+
+    @Test
+    fun `encodeName produces length-prefixed labels terminated by root`() {
+        val encoded = DnsMessage.encodeName("forcesafesearch.google.com")!!
+        assertEquals(0, encoded.last().toInt())
+        assertEquals("forcesafesearch.google.com", decodeName(encoded, 0))
+    }
+
+    @Test
+    fun `encodeName rejects empty and oversized labels`() {
+        assertNull(DnsMessage.encodeName("a..b"))
+        assertNull(DnsMessage.encodeName("x".repeat(64) + ".com"))
+    }
+
+    @Test
+    fun `cname response carries the canonical name`() {
+        val q = query("google.com")
+        val resp = DnsMessage.buildCnameResponse(q, "forcesafesearch.google.com", ttlSeconds = 300)!!
+        assertTrue(resp[2].toInt() and 0x80 != 0)                // QR=1
+        assertEquals(0, resp[3].toInt() and 0x0F)                // RCODE=0
+        assertEquals(1, u16(resp, 6))                            // ANCOUNT=1
+
+        // Answer begins right after the echoed question.
+        val ansStart = q.size
+        assertEquals(0xC00C, u16(resp, ansStart))                // name pointer to question
+        assertEquals(DnsMessage.TYPE_CNAME, u16(resp, ansStart + 2))
+        assertEquals(DnsMessage.CLASS_IN, u16(resp, ansStart + 4))
+        val rdLength = u16(resp, ansStart + 10)
+        val rdataStart = ansStart + 12
+        assertEquals("forcesafesearch.google.com", decodeName(resp, rdataStart))
+        // RDLENGTH matches the encoded name length.
+        assertEquals(rdLength, resp.size - rdataStart)
+    }
+
+    @Test
+    fun `cname response rejects invalid inputs`() {
+        assertNull(DnsMessage.buildCnameResponse(ByteArray(4), "safe.example.com")) // bad query
+        assertNull(DnsMessage.buildCnameResponse(query("google.com"), "a..b"))       // bad name
+    }
 }

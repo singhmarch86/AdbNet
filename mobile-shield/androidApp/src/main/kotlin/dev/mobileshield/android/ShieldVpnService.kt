@@ -109,12 +109,20 @@ class ShieldVpnService : VpnService() {
         val question = DnsMessage.parseFirstQuestion(query)
 
         val responsePayload: ByteArray = if (question != null) {
-            when (matcher.decide(question.name).action) {
+            val decision = matcher.decide(question.name)
+            when (decision.action) {
                 FilterAction.BLOCK ->
                     DnsMessage.buildNxDomainResponse(query) ?: forward(query)
-                // TODO: SafeSearch REWRITE currently forwards the query unchanged;
-                // proper CNAME rewriting to the safe host is a follow-up.
-                FilterAction.REWRITE,
+                FilterAction.REWRITE -> {
+                    // SafeSearch: answer with a CNAME to the safe host, which the
+                    // client then resolves (and which the filter allows).
+                    val target = decision.rewriteTo
+                    if (target != null) {
+                        DnsMessage.buildCnameResponse(query, target) ?: forward(query)
+                    } else {
+                        forward(query)
+                    }
+                }
                 FilterAction.ALLOW -> forward(query)
             }
         } else {
