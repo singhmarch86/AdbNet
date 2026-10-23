@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Mobile Shield</string>
+    <string name="accessibility_description">Lets Mobile Shield detect when a payment app opens while a screen-sharing or remote-access app is active, so it can warn you before a scam payment. It reads only which app is in front, never your screen content.</string>
+    <string name="accessibility_summary">Improves scam detection at the moment of payment.</string>
 </resources>

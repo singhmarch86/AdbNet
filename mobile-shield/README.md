@@ -43,7 +43,11 @@ their knowledge**. It is not built to covertly monitor another adult.
   the shared matcher, and a Compose UI with two tabs — **Protect** (filter
   toggle + UPI checker, plus share-to-check for UPI links) and **Checkup**,
   which collects installed apps and downloaded APKs via `PackageManager` /
-  `MediaStore` and runs them through the shared hygiene + APK analyzers.
+  `MediaStore` and runs them through the shared hygiene + APK analyzers. It also
+  includes **live payment protection**: a foreground-service monitor that, when
+  a UPI/banking app opens, feeds live context (active call, screen-share
+  heuristic, device-hygiene risk) into the shared `ScamGuard` and warns via an
+  overlay — with an optional, opt-in accessibility service for better detection.
   Kotlin.
 - `iosApp/` — the iOS shell: a SwiftUI app and a NetworkExtension DNS proxy,
   both calling the shared `core` framework. Swift.

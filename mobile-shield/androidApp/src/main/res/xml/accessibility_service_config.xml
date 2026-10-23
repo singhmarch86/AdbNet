@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Window-level events only: no content retrieval (flagRetrieveInteractive is
+     deliberately omitted) so the service cannot read on-screen text. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="200"
+    android:description="@string/accessibility_description"
+    android:summary="@string/accessibility_summary" />

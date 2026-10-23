@@ -161,6 +161,9 @@ private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
                 report?.let { RiskResult(it) }
             }
         }
+
+        // --- Live payment protection --------------------------------------
+        PaymentGuardCard()
     }
 }
 
