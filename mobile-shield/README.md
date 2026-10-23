@@ -27,10 +27,17 @@ their knowledge**. It is not built to covertly monitor another adult.
 
 ## Layout
 
-- `core/` — pure Kotlin/JVM logic, no Android dependency, fully unit-tested:
-  the domain blocklist matcher and the UPI link analyzer. This is the part that
-  can be verified in CI on any machine.
-- *(later)* `app/` — the Android shell: the `VpnService`, QR scanning, and UI.
+- `core/` — a **Kotlin Multiplatform** module holding all shared logic with no
+  platform dependency: the domain blocklist matcher, the UPI link analyzer, and
+  the small pure-Kotlin helpers (IDNA/punycode, decimal, percent-decode) that
+  replace their JVM-only equivalents so the code compiles for both Android and
+  iOS. Fully unit-tested via `commonTest`; the JVM target runs the tests in CI
+  on any host. Apple (`iosX64`/`iosArm64`/`iosSimulatorArm64`) targets are
+  declared on a macOS host, where the iOS framework is produced.
+- *(later)* `androidApp/` — the Android shell: `VpnService` DNS filter, QR
+  scanning, Compose UI.
+- *(later)* `iosApp/` — the iOS shell: a NetworkExtension DNS provider and a
+  SwiftUI app, both calling the shared `core` framework.
 
 ## Principles
 
@@ -40,7 +47,12 @@ their knowledge**. It is not built to covertly monitor another adult.
 
 ## Build
 
+Run the shared-logic tests (works on any host — Linux, macOS, Windows):
+
 ```
 cd mobile-shield
-./gradlew :core:test
+./gradlew :core:jvmTest
 ```
+
+On a macOS host the same `core` also compiles to an iOS framework
+(`./gradlew :core:iosArm64MainKlibrary` and related tasks).

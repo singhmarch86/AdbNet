@@ -1,8 +1,7 @@
 package dev.mobileshield.core.upi
 
-import java.math.BigDecimal
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
+import dev.mobileshield.core.util.Decimal
+import dev.mobileshield.core.util.percentDecode
 
 /**
  * A parsed UPI deep link, e.g.
@@ -38,8 +37,8 @@ data class UpiLink(
     val amountRaw: String? get() = params["am"]
 
     /** Parsed amount, or null if absent or not a valid number. */
-    val amount: BigDecimal?
-        get() = amountRaw?.let { runCatching { BigDecimal(it.trim()) }.getOrNull() }
+    val amount: Decimal?
+        get() = amountRaw?.let { Decimal.parseOrNull(it) }
 
     /** The handle part of the VPA (`okbank` in `alice@okbank`), lower-cased. */
     val payeeHandle: String?
@@ -74,7 +73,6 @@ data class UpiLink(
             return UpiLink(action, params)
         }
 
-        private fun decode(s: String): String =
-            runCatching { URLDecoder.decode(s, StandardCharsets.UTF_8.name()) }.getOrDefault(s)
+        private fun decode(s: String): String = percentDecode(s)
     }
 }

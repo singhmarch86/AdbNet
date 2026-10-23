@@ -1,6 +1,6 @@
 package dev.mobileshield.core.upi
 
-import java.math.BigDecimal
+import dev.mobileshield.core.util.Decimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -15,7 +15,7 @@ class UpiLinkParseTest {
         assertEquals("pay", link!!.action)
         assertEquals("alice@okaxis", link.payeeAddress)
         assertEquals("Alice", link.payeeName)
-        assertEquals(BigDecimal("100.50"), link.amount)
+        assertEquals(Decimal.parseOrNull("100.50"), link.amount)
         assertEquals("okaxis", link.payeeHandle)
         assertEquals("INR", link.currency)
     }

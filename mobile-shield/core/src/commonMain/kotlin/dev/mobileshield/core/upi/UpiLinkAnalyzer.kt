@@ -1,6 +1,6 @@
 package dev.mobileshield.core.upi
 
-import java.math.BigDecimal
+import dev.mobileshield.core.util.Decimal
 
 enum class RiskLevel { LOW, MEDIUM, HIGH, CRITICAL }
 
@@ -49,7 +49,7 @@ data class UpiRiskReport(
  * known-handle set are constructor parameters so they can be tuned and tested.
  */
 class UpiLinkAnalyzer(
-    private val highAmountThreshold: BigDecimal = BigDecimal("5000"),
+    private val highAmountThreshold: Decimal = Decimal.parseOrNull("5000")!!,
     private val knownPspHandles: Set<String> = DEFAULT_KNOWN_PSP_HANDLES,
     private val suspiciousNoteKeywords: Set<String> = DEFAULT_SUSPICIOUS_NOTE_KEYWORDS,
 ) {

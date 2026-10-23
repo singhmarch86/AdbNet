@@ -1,6 +1,6 @@
 package dev.mobileshield.core.filter
 
-import java.net.IDN
+import dev.mobileshield.core.util.Idna
 
 /**
  * A normalized DNS host name used for blocklist matching.
@@ -63,11 +63,7 @@ class HostName private constructor(
             if (s.endsWith('.')) s = s.dropLast(1)
             if (s.isEmpty()) return null
 
-            val ascii = try {
-                IDN.toASCII(s, IDN.ALLOW_UNASSIGNED)
-            } catch (_: IllegalArgumentException) {
-                return null
-            }
+            val ascii = Idna.toAscii(s)
 
             val labels = ascii.split('.')
             if (labels.any { it.isEmpty() }) return null
