@@ -34,10 +34,11 @@ their knowledge**. It is not built to covertly monitor another adult.
   iOS. Fully unit-tested via `commonTest`; the JVM target runs the tests in CI
   on any host. Apple (`iosX64`/`iosArm64`/`iosSimulatorArm64`) targets are
   declared on a macOS host, where the iOS framework is produced.
-- *(later)* `androidApp/` — the Android shell: `VpnService` DNS filter, QR
-  scanning, Compose UI.
-- *(later)* `iosApp/` — the iOS shell: a NetworkExtension DNS provider and a
-  SwiftUI app, both calling the shared `core` framework.
+- `androidApp/` — the Android shell: a local `VpnService` DNS filter wired to
+  the shared matcher, a Compose UI (filter toggle + UPI checker), and share-to-
+  check for UPI links. Kotlin.
+- `iosApp/` — the iOS shell: a SwiftUI app and a NetworkExtension DNS proxy,
+  both calling the shared `core` framework. Swift.
 
 ## Principles
 
@@ -47,12 +48,24 @@ their knowledge**. It is not built to covertly monitor another adult.
 
 ## Build
 
-Run the shared-logic tests (works on any host — Linux, macOS, Windows):
+**Shared logic (any host — Linux, macOS, Windows):**
 
 ```
 cd mobile-shield
 ./gradlew :core:jvmTest
 ```
 
-On a macOS host the same `core` also compiles to an iOS framework
-(`./gradlew :core:iosArm64MainKlibrary` and related tasks).
+**Android app** (needs the Android SDK and access to Google's Maven, i.e.
+`dl.google.com`). It is kept out of the default build so the shared module
+stays buildable in restricted/CI environments. To build it:
+
+1. Uncomment `include(":androidApp")` in `settings.gradle.kts`.
+2. Point `ANDROID_HOME` / `local.properties` at your SDK.
+3. `./gradlew :androidApp:assembleDebug -Pmobileshield.android=true`
+
+The `-Pmobileshield.android=true` flag switches on the shared module's Android
+target (see `core/build.gradle.kts`).
+
+**iOS app** (macOS + Xcode only) — see `iosApp/README.md`. The shared `core`
+builds to `MobileShieldCore.framework` via
+`./gradlew :core:linkDebugFrameworkIosArm64` and related tasks on a Mac.
