@@ -19,6 +19,10 @@ their knowledge**. It is not built to covertly monitor another adult.
    sideload them: disguised `document.pdf.apk` names, unsigned packages,
    dangerous requested permissions, tiny droppers, MIME mismatches, brand
    impersonation, and unknown download sources.
+6. **QR payload analyzer** — classify any decoded QR (UPI / URL / Wi-Fi / tel /
+   SMS / …) and score scam risk: UPI payloads reuse the UPI analyzer; URLs are
+   checked for shorteners, raw-IP, `.apk`, punycode/homograph hosts, embedded
+   credentials and brand-on-a-bad-domain; Wi-Fi / tel / SMS get targeted checks.
 5. **Smishing classifier** — score an SMS / notification for phishing signs,
    offline and multilingual (English + Hindi/Hinglish, romanized and
    Devanagari): shortened / raw-IP / APK links, urgency or reward bait,
