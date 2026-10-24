@@ -29,6 +29,11 @@ their knowledge**. It is not built to covertly monitor another adult.
    requests to share OTP/PIN/CVV, KYC bait, and personal-number senders.
    Conservative about the OTP false positive — a genuine "your OTP is …, do
    not share" is not flagged.
+7. **Fraud reputation (privacy-preserving)** — a serializable Bloom filter of
+   reported-fraud VPAs / hosts that is downloaded once and queried entirely
+   on-device, so a payee or website is checked without ever being sent to a
+   server. No false negatives; a tunable false-positive rate; stable hashing so
+   a filter built anywhere matches everywhere.
 
 ## What it honestly cannot do
 
