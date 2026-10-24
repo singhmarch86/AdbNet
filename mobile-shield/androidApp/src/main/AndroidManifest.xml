@@ -27,6 +27,11 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <!-- Optional SMS auto-scan. Google Play restricts SMS permissions to the
+         default SMS handler, so this is mainly for sideload/enterprise builds;
+         the in-app "check a message" card needs no permission. -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"
@@ -86,5 +91,15 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!-- Optional incoming-SMS smishing scan (see RECEIVE_SMS note above). -->
+        <receiver
+            android:name=".smishing.SmsSmishingReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

@@ -54,7 +54,9 @@ their knowledge**. It is not built to covertly monitor another adult.
   a UPI/banking app opens, feeds live context (active call, screen-share
   heuristic, device-hygiene risk) into the shared `ScamGuard` and warns via an
   overlay — with an optional, opt-in accessibility service for better detection.
-  Kotlin.
+  Also a **message checker** (paste an SMS, no permission needed) and an
+  optional incoming-SMS auto-scan receiver, both using the shared
+  `SmishingClassifier`. Kotlin.
 - `iosApp/` — the iOS shell: a SwiftUI app and a NetworkExtension DNS proxy,
   both calling the shared `core` framework. Swift.
 

@@ -103,6 +103,8 @@ fun CheckupTab() {
 
         hygiene?.let { HygieneReportView(it) }
         apks?.let { ApkReportsView(it) }
+
+        MessageCheckCard()
     }
 }
 
