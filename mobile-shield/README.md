@@ -19,6 +19,12 @@ their knowledge**. It is not built to covertly monitor another adult.
    sideload them: disguised `document.pdf.apk` names, unsigned packages,
    dangerous requested permissions, tiny droppers, MIME mismatches, brand
    impersonation, and unknown download sources.
+5. **Smishing classifier** — score an SMS / notification for phishing signs,
+   offline and multilingual (English + Hindi/Hinglish, romanized and
+   Devanagari): shortened / raw-IP / APK links, urgency or reward bait,
+   requests to share OTP/PIN/CVV, KYC bait, and personal-number senders.
+   Conservative about the OTP false positive — a genuine "your OTP is …, do
+   not share" is not flagged.
 
 ## What it honestly cannot do
 
