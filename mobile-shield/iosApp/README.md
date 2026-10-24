@@ -31,16 +31,24 @@ Then `import MobileShieldCore` from Swift. Kotlin maps to Swift as:
 
 ## Xcode project layout to create
 
-Create an Xcode project `MobileShield` with two targets:
+Create an Xcode project `MobileShield` with these targets:
 
-1. **MobileShield** (SwiftUI app) — uses `MobileShield/` sources here.
+1. **MobileShield** (SwiftUI app) — uses `MobileShield/` sources here
+   (`ContentView` + `MessageCheckView`).
 2. **DnsFilterExtension** (App Extension, *Network Extension* → *DNS Proxy
    Provider*) — uses `DnsFilterExtension/` sources here.
+3. **MessageFilterExtension** (App Extension, *Message Filter*) — uses
+   `MessageFilterExtension/` sources here; the iOS sibling of the Android SMS
+   smishing scanner.
 
 Capabilities / entitlements:
-- App + extension: **Network Extensions** → *DNS Proxy* (`com.apple.networkextension.dns-proxy`).
-- Install the proxy via `NEDNSProxyManager` (the app saves a configuration the
-  user approves in Settings).
+- App + DNS extension: **Network Extensions** → *DNS Proxy*
+  (`com.apple.networkextension.dns-proxy`).
+- Message filter extension: **Message Filter**
+  (`com.apple.developer.identitylookup.message-filter`).
+- Install the DNS proxy via `NEDNSProxyManager`. The SMS filter is enabled by
+  the user under **Settings → Messages → Unknown & Spam → SMS Filtering**, and
+  only sees messages from senders not in the user's contacts.
 
 ## What iOS can and can't do (same honesty as the rest of the project)
 - A per-device DNS proxy works for the user's own phone. **Locking it down on a

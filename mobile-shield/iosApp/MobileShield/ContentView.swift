@@ -23,6 +23,12 @@ struct ContentView: View {
                         riskView(report)
                     }
                 }
+
+                Section {
+                    NavigationLink("Check a text message") {
+                        MessageCheckView()
+                    }
+                }
             }
             .navigationTitle("Mobile Shield")
         }
