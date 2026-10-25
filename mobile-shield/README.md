@@ -34,6 +34,12 @@ their knowledge**. It is not built to covertly monitor another adult.
    on-device, so a payee or website is checked without ever being sent to a
    server. No false negatives; a tunable false-positive rate; stable hashing so
    a filter built anywhere matches everywhere.
+8. **Enforcement policy (Device Owner)** — decides which OS-level lockdowns to
+   apply from a protection profile (Standard / Child / High-security) plus live
+   risk: force-VPN-always-on, block sideloading, lock SafeSearch, disallow
+   screen capture / debugging / safe-boot, remove remote-access apps. The
+   Android `DevicePolicyManager` layer executes these when the app is device
+   owner; without that, every action degrades honestly to a warning.
 
 ## What it honestly cannot do
 
