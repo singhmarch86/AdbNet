@@ -3,6 +3,7 @@ package dev.mobileshield.core.guard
 import dev.mobileshield.core.hygiene.DeviceHygieneAnalyzer
 import dev.mobileshield.core.hygiene.InstallSource
 import dev.mobileshield.core.hygiene.InstalledApp
+import dev.mobileshield.core.reputation.ReputationStatus
 import dev.mobileshield.core.upi.UpiLinkAnalyzer
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -62,6 +63,34 @@ class ScamGuardTest {
     fun `collect request with active screen share is block`() {
         val d = guard.evaluate(PaymentContext(upi = collectRequest(), screenSharingActive = true))
         assertEquals(GuardAction.BLOCK_RECOMMENDED, d.action)
+    }
+
+    @Test
+    fun `reported-fraud payee blocks on its own`() {
+        val d = guard.evaluate(PaymentContext(payeeReputation = ReputationStatus.REPORTED_FRAUD))
+        assertEquals(GuardAction.BLOCK_RECOMMENDED, d.action)
+        assertTrue(d.headline.contains("reported for fraud", ignoreCase = true))
+    }
+
+    @Test
+    fun `not-listed payee adds no signal`() {
+        val d = guard.evaluate(PaymentContext(payeeReputation = ReputationStatus.NOT_LISTED))
+        assertEquals(GuardAction.ALLOW, d.action)
+        assertTrue(d.signals.isEmpty())
+    }
+
+    @Test
+    fun `reported-fraud link host is a strong warning`() {
+        val d = guard.evaluate(PaymentContext(linkHostReputation = ReputationStatus.REPORTED_FRAUD))
+        assertEquals(GuardAction.WARN, d.action)
+        // And combined with any other signal it escalates to a block.
+        val escalated = guard.evaluate(
+            PaymentContext(
+                linkHostReputation = ReputationStatus.REPORTED_FRAUD,
+                screenSharingActive = true,
+            )
+        )
+        assertEquals(GuardAction.BLOCK_RECOMMENDED, escalated.action)
     }
 
     @Test

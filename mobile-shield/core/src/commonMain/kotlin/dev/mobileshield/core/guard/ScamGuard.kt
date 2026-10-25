@@ -1,6 +1,7 @@
 package dev.mobileshield.core.guard
 
 import dev.mobileshield.core.hygiene.HygieneReport
+import dev.mobileshield.core.reputation.ReputationStatus
 import dev.mobileshield.core.upi.RiskLevel
 import dev.mobileshield.core.upi.UpiRiskReport
 
@@ -22,6 +23,10 @@ data class PaymentContext(
     val payeeFirstSeen: Boolean = false,
     /** The payment was started from a link/message, not typed by the user. */
     val initiatedFromLink: Boolean = false,
+    /** On-device fraud-reputation verdict for the payee VPA, if checked. */
+    val payeeReputation: ReputationStatus? = null,
+    /** On-device fraud-reputation verdict for a link/QR host, if checked. */
+    val linkHostReputation: ReputationStatus? = null,
 )
 
 /** What the app should do at the payment moment. */
@@ -59,6 +64,21 @@ class ScamGuard(
 ) {
     fun evaluate(context: PaymentContext): GuardDecision {
         val signals = mutableListOf<GuardSignal>()
+
+        // A payee / host already reported for fraud by others — enough to block
+        // on its own.
+        if (context.payeeReputation == ReputationStatus.REPORTED_FRAUD) {
+            signals += GuardSignal(
+                70,
+                "This payee has been reported for fraud. Do not pay unless you are certain it is genuine.",
+            )
+        }
+        if (context.linkHostReputation == ReputationStatus.REPORTED_FRAUD) {
+            signals += GuardSignal(
+                60,
+                "The website behind this payment has been reported for fraud.",
+            )
+        }
 
         // The classic remote-access scam: on a call AND screen is being shared
         // while a payment is in progress.
