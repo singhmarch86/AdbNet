@@ -71,7 +71,11 @@ their knowledge**. It is not built to covertly monitor another adult.
   overlay — with an optional, opt-in accessibility service for better detection.
   Also a **message checker** (paste an SMS, no permission needed) and an
   optional incoming-SMS auto-scan receiver, both using the shared
-  `SmishingClassifier`. Kotlin.
+  `SmishingClassifier`. For managed/child devices, a **Device Owner** layer
+  (`DeviceAdminReceiver` + `DevicePolicyManager`) executes the shared
+  `EnforcementPolicyEngine`'s plan — locking the filter on, blocking
+  sideloading, etc. — degrading to warnings when not provisioned as owner.
+  Kotlin.
 - `iosApp/` — the iOS shell: a SwiftUI app and a NetworkExtension DNS proxy,
   both calling the shared `core` framework. Swift.
 

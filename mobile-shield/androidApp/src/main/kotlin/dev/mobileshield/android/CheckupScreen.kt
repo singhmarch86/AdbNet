@@ -105,6 +105,7 @@ fun CheckupTab() {
         apks?.let { ApkReportsView(it) }
 
         MessageCheckCard()
+        ManagedProtectionCard()
     }
 }
 

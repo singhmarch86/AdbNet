@@ -92,6 +92,20 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Device admin for OS-level enforcement (only effective when the app
+             is provisioned as device owner; see policy/ for details). -->
+        <receiver
+            android:name=".policy.ShieldDeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Optional incoming-SMS smishing scan (see RECEIVE_SMS note above). -->
         <receiver
             android:name=".smishing.SmsSmishingReceiver"
