@@ -37,6 +37,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.Alignment
+import dev.mobileshield.android.filter.DnsResolver
+import dev.mobileshield.android.filter.DnsResolvers
+import dev.mobileshield.android.filter.FilterSettings
 import dev.mobileshield.core.upi.RiskLevel
 import dev.mobileshield.core.upi.UpiLinkAnalyzer
 import dev.mobileshield.core.upi.UpiRiskReport
@@ -91,6 +98,7 @@ private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
     var link by remember { mutableStateOf(initialLink) }
     var report by remember { mutableStateOf<UpiRiskReport?>(null) }
     var showScanner by remember { mutableStateOf(false) }
+    var resolver by remember { mutableStateOf(FilterSettings.resolver(context)) }
 
     val vpnConsent = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -148,6 +156,19 @@ private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
                 ) {
                     Text(if (filtering) "Turn off filter" else "Turn on filter")
                 }
+
+                FilteringSourceChooser(
+                    selected = resolver,
+                    onSelect = { chosen ->
+                        FilterSettings.setResolver(context, chosen)
+                        resolver = chosen
+                        if (filtering) {
+                            // restart so the newly chosen resolver takes effect
+                            stopFilter(context)
+                            startFilter(context)
+                        }
+                    },
+                )
             }
         }
 
@@ -212,6 +233,27 @@ private fun RiskResult(report: UpiRiskReport) {
             }
         }
     }
+}
+
+@Composable
+private fun FilteringSourceChooser(selected: DnsResolver, onSelect: (DnsResolver) -> Unit) {
+    Text("Filtering source", style = MaterialTheme.typography.titleSmall)
+    DnsResolvers.ALL.forEach { r ->
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable { onSelect(r) },
+        ) {
+            RadioButton(selected = r.id == selected.id, onClick = { onSelect(r) })
+            Column(Modifier.padding(start = 4.dp)) {
+                Text(r.label)
+                Text(r.description, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+    Text(
+        "Changing this restarts the filter.",
+        style = MaterialTheme.typography.bodySmall,
+    )
 }
 
 private fun startFilter(context: Context) {

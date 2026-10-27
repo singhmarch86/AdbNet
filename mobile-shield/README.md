@@ -6,8 +6,9 @@ their knowledge**. It is not built to covertly monitor another adult.
 ## Modules
 
 1. **Content filter** — an on-device DNS filter (Android `VpnService`) that
-   forwards lookups to a **family-filtering upstream resolver** (Cloudflare for
-   Families `1.1.1.3`), so adult content and malware are blocked against a real,
+   forwards lookups to a **user-selectable family-filtering upstream resolver**
+   (Cloudflare for Families, CleanBrowsing Family, OpenDNS FamilyShield, or
+   malware-only), so adult content and malware are blocked against a real,
    constantly-updated list rather than a hardcoded one. It also enforces
    SafeSearch (CNAME rewrite), applies local allow/block overrides, and blocks
    known DNS-over-HTTPS bootstrap hosts that apps use to dodge DNS filtering.

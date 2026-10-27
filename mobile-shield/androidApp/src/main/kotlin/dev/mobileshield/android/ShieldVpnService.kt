@@ -9,6 +9,8 @@ import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import dev.mobileshield.android.data.Blocklists
+import dev.mobileshield.android.filter.DnsResolvers
+import dev.mobileshield.android.filter.FilterSettings
 import dev.mobileshield.android.net.Ipv4UdpPacket
 import dev.mobileshield.core.dns.DnsMessage
 import dev.mobileshield.core.filter.DomainBlocklistMatcher
@@ -37,6 +39,7 @@ class ShieldVpnService : VpnService() {
     private var worker: Thread? = null
     private var tunnel: ParcelFileDescriptor? = null
     private lateinit var matcher: DomainBlocklistMatcher
+    private var upstreamServers: List<String> = DnsResolvers.DEFAULT.servers
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -50,6 +53,7 @@ class ShieldVpnService : VpnService() {
     private fun startFilter() {
         if (running.getAndSet(true)) return
         matcher = Blocklists.createMatcher()
+        upstreamServers = FilterSettings.resolver(this).servers
         startForeground(NOTIFICATION_ID, buildNotification())
 
         val fd = Builder()
@@ -142,7 +146,7 @@ class ShieldVpnService : VpnService() {
      */
     private fun forward(query: ByteArray): ByteArray {
         var last: Exception? = null
-        for (server in UPSTREAM_DNS) {
+        for (server in upstreamServers) {
             try {
                 DatagramSocket().use { socket ->
                     protect(socket) // keep this socket off the VPN to avoid a loop
@@ -183,12 +187,8 @@ class ShieldVpnService : VpnService() {
         private const val TAG = "ShieldVpnService"
         const val ACTION_STOP = "dev.mobileshield.android.STOP"
         private const val VPN_ADDRESS = "10.111.0.2"
-
-        // Family-filtering upstream resolvers: Cloudflare for Families (1.1.1.3
-        // / 1.0.0.3) blocks adult content and malware server-side. Swap for
-        // CleanBrowsing Family (185.228.168.168 / 185.228.169.168) or
-        // OpenDNS FamilyShield (208.67.222.123) if preferred. Tried in order.
-        private val UPSTREAM_DNS = listOf("1.1.1.3", "1.0.0.3")
+        // Upstream resolvers are chosen by the user (see FilterSettings /
+        // DnsResolvers); the default is Cloudflare for Families.
         private const val UPSTREAM_TIMEOUT_MS = 5000
         private const val MAX_PACKET = 32767
         private const val NOTIFICATION_ID = 1
