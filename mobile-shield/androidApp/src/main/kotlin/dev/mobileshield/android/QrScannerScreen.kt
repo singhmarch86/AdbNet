@@ -153,7 +153,7 @@ private fun CameraPreview(onDecoded: (String) -> Unit, modifier: Modifier = Modi
     )
 }
 
-@OptIn(ExperimentalGetImage::class)
+@ExperimentalGetImage
 private fun process(
     proxy: ImageProxy,
     scanner: com.google.mlkit.vision.barcode.BarcodeScanner,
