@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -89,6 +90,7 @@ private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
     var filtering by remember { mutableStateOf(false) }
     var link by remember { mutableStateOf(initialLink) }
     var report by remember { mutableStateOf<UpiRiskReport?>(null) }
+    var showScanner by remember { mutableStateOf(false) }
 
     val vpnConsent = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -97,6 +99,11 @@ private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
             startFilter(context)
             filtering = true
         }
+    }
+
+    if (showScanner) {
+        QrScannerScreen(onClose = { showScanner = false })
+        return
     }
 
     Column(
@@ -157,6 +164,12 @@ private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Check")
+                }
+                OutlinedButton(
+                    onClick = { showScanner = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Scan a QR code")
                 }
                 report?.let { RiskResult(it) }
             }
