@@ -68,5 +68,8 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.4")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
+    // On-device NSFW image classification for the in-app safe browser.
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -41,6 +41,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.RadioButton
 import androidx.compose.ui.Alignment
+import dev.mobileshield.android.browser.BrowserScreen
 import dev.mobileshield.android.filter.DnsResolver
 import dev.mobileshield.android.filter.DnsResolvers
 import dev.mobileshield.android.filter.FilterSettings
@@ -82,10 +83,12 @@ private fun App(analyzer: UpiLinkAnalyzer, initialLink: String) {
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Protect") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Checkup") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Browser") })
+            Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Checkup") })
         }
         when (tab) {
             0 -> ProtectTab(analyzer = analyzer, initialLink = initialLink)
+            1 -> BrowserScreen()
             else -> CheckupTab()
         }
     }

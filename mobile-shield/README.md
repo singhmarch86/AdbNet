@@ -14,7 +14,11 @@ their knowledge**. It is not built to covertly monitor another adult.
    known DNS-over-HTTPS bootstrap hosts that apps use to dodge DNS filtering.
    Only DNS lookups are inspected; page content never leaves the device. Being
    DNS-level, it can't filter adult content *within* an allowed general site
-   (Reddit/X/etc.) — that needs the in-app NSFW-classifier browser (planned).
+   (Reddit/X/etc.) — that's what the in-app safe browser (below) adds.
+   *(Also: an in-app **safe browser** (Browser tab) that filters images
+   pixel-by-pixel with an on-device NSFW TensorFlow Lite classifier — real
+   content-based filtering. The model is supplied by the deployer; see
+   `androidApp/src/main/assets/README.md`.)*
 2. **UPI scam protection** — inspects a UPI link / QR *before* you act on it and
    warns about collect (pull-money) requests, malformed or unknown payee
    handles, high amounts, scam-bait notes, and tampered links.
