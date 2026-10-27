@@ -2,7 +2,18 @@ pluginManagement {
     repositories {
         mavenCentral()
         gradlePluginPortal()
-        google() // last: only queried for Android plugins, which live here
+        google() // Android plugins live here
+    }
+    // Versions for plugins applied by subprojects without a version. These are
+    // lazy: a plugin is only resolved when a module actually applies it, so a
+    // core-only build (without -Pmobileshield.android) never fetches the Android
+    // plugins — which keeps the shared module buildable where Google's Maven is
+    // blocked.
+    plugins {
+        id("com.android.application") version "8.7.3"
+        id("com.android.library") version "8.7.3"
+        id("org.jetbrains.kotlin.android") version "2.0.21"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
     }
 }
 
@@ -17,12 +28,10 @@ rootProject.name = "mobile-shield"
 
 include(":core")
 
-// The Android app lives in androidApp/ as source. It is intentionally left out
-// of the build by default because its Android Gradle Plugin + SDK dependencies
-// are served from dl.google.com, which some sandboxed/CI environments block.
-// To build the Android app on a host with access to Google's Maven + the
-// Android SDK, uncomment the line below and build with:
+// The Android app builds only when you opt in with -Pmobileshield.android=true
+// (it needs the Android Gradle Plugin + SDK from Google, which some sandboxed /
+// CI environments block). Build it with:
 //   ./gradlew :androidApp:assembleDebug -Pmobileshield.android=true
-// (The -P flag switches on the shared core's androidTarget; see core/build.gradle.kts.)
-//
-// include(":androidApp")
+if (startParameter.projectProperties["mobileshield.android"] == "true") {
+    include(":androidApp")
+}
