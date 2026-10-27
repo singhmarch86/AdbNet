@@ -133,18 +133,32 @@ class ShieldVpnService : VpnService() {
         synchronized(output) { output.write(reply) }
     }
 
-    /** Forwards a DNS query to the upstream resolver over a protected socket. */
+    /**
+     * Forwards a DNS query to a family-filtering upstream resolver over a
+     * protected socket. The upstream (Cloudflare for Families) maintains the
+     * adult/malware categorization server-side, so every allowed name is
+     * filtered against a real, constantly-updated list — not just our local
+     * seed entries. Tries each resolver in turn; throws if all fail.
+     */
     private fun forward(query: ByteArray): ByteArray {
-        DatagramSocket().use { socket ->
-            protect(socket) // keep this socket off the VPN to avoid a loop
-            socket.soTimeout = UPSTREAM_TIMEOUT_MS
-            val upstream = InetAddress.getByName(UPSTREAM_DNS)
-            socket.send(DatagramPacket(query, query.size, upstream, Ipv4UdpPacket.DNS_PORT))
-            val resp = ByteArray(MAX_PACKET)
-            val dp = DatagramPacket(resp, resp.size)
-            socket.receive(dp)
-            return resp.copyOf(dp.length)
+        var last: Exception? = null
+        for (server in UPSTREAM_DNS) {
+            try {
+                DatagramSocket().use { socket ->
+                    protect(socket) // keep this socket off the VPN to avoid a loop
+                    socket.soTimeout = UPSTREAM_TIMEOUT_MS
+                    val upstream = InetAddress.getByName(server)
+                    socket.send(DatagramPacket(query, query.size, upstream, Ipv4UdpPacket.DNS_PORT))
+                    val resp = ByteArray(MAX_PACKET)
+                    val dp = DatagramPacket(resp, resp.size)
+                    socket.receive(dp)
+                    return resp.copyOf(dp.length)
+                }
+            } catch (e: Exception) {
+                last = e
+            }
         }
+        throw last ?: java.io.IOException("No upstream DNS server configured")
     }
 
     private fun buildNotification(): Notification {
@@ -154,7 +168,7 @@ class ShieldVpnService : VpnService() {
         )
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Mobile Shield is filtering")
-            .setContentText("Blocking unwanted domains and forcing SafeSearch.")
+            .setContentText("Blocking adult/malware domains via family-safe DNS and forcing SafeSearch.")
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setOngoing(true)
             .build()
@@ -169,7 +183,12 @@ class ShieldVpnService : VpnService() {
         private const val TAG = "ShieldVpnService"
         const val ACTION_STOP = "dev.mobileshield.android.STOP"
         private const val VPN_ADDRESS = "10.111.0.2"
-        private const val UPSTREAM_DNS = "1.1.1.1"
+
+        // Family-filtering upstream resolvers: Cloudflare for Families (1.1.1.3
+        // / 1.0.0.3) blocks adult content and malware server-side. Swap for
+        // CleanBrowsing Family (185.228.168.168 / 185.228.169.168) or
+        // OpenDNS FamilyShield (208.67.222.123) if preferred. Tried in order.
+        private val UPSTREAM_DNS = listOf("1.1.1.3", "1.0.0.3")
         private const val UPSTREAM_TIMEOUT_MS = 5000
         private const val MAX_PACKET = 32767
         private const val NOTIFICATION_ID = 1

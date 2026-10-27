@@ -121,10 +121,13 @@ private fun ProtectTab(analyzer: UpiLinkAnalyzer, initialLink: String) {
                 Text("Content filter", style = MaterialTheme.typography.titleLarge)
                 Text(
                     if (filtering)
-                        "Filtering is ON. Blocking unwanted domains and forcing SafeSearch."
+                        "Filtering is ON. Adult content and malware are blocked via a family-safe DNS " +
+                            "resolver, and SafeSearch is enforced."
                     else
-                        "Blocks adult/unwanted domains, forces SafeSearch, and closes the " +
-                            "DNS-over-HTTPS bypass. Local only — no traffic leaves your phone."
+                        "Blocks adult content and malware using a family-safe DNS resolver " +
+                            "(Cloudflare for Families), forces SafeSearch, and closes the DNS-over-HTTPS " +
+                            "bypass. Only DNS lookups are checked — your page content and browsing never " +
+                            "leave the phone."
                 )
                 Button(
                     onClick = {

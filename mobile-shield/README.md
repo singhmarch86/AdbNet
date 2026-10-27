@@ -5,10 +5,15 @@ their knowledge**. It is not built to covertly monitor another adult.
 
 ## Modules
 
-1. **Content filter** — an on-device DNS filter (Android `VpnService`, local
-   only, no traffic leaves the phone) that blocks adult/unwanted domains,
-   forces SafeSearch, and blocks known DNS-over-HTTPS bootstrap hosts that apps
-   use to dodge DNS filtering.
+1. **Content filter** — an on-device DNS filter (Android `VpnService`) that
+   forwards lookups to a **family-filtering upstream resolver** (Cloudflare for
+   Families `1.1.1.3`), so adult content and malware are blocked against a real,
+   constantly-updated list rather than a hardcoded one. It also enforces
+   SafeSearch (CNAME rewrite), applies local allow/block overrides, and blocks
+   known DNS-over-HTTPS bootstrap hosts that apps use to dodge DNS filtering.
+   Only DNS lookups are inspected; page content never leaves the device. Being
+   DNS-level, it can't filter adult content *within* an allowed general site
+   (Reddit/X/etc.) — that needs the in-app NSFW-classifier browser (planned).
 2. **UPI scam protection** — inspects a UPI link / QR *before* you act on it and
    warns about collect (pull-money) requests, malformed or unknown payee
    handles, high amounts, scam-bait notes, and tampered links.
