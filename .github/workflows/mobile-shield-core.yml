@@ -1,0 +1,40 @@
+name: mobile-shield-core
+
+on:
+  push:
+    branches: [ "claude/wizardly-newton-c6ff9l", "main" ]
+    paths:
+      - "mobile-shield/**"
+      - ".github/workflows/mobile-shield-core.yml"
+  pull_request:
+    paths:
+      - "mobile-shield/**"
+  workflow_dispatch:
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile-shield
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      # Runs only the shared Kotlin Multiplatform core (no Android SDK / Google
+      # Maven needed), which holds all the scam/filter logic and its tests.
+      - name: Run shared core unit tests
+        run: ./gradlew :core:jvmTest --no-daemon --stacktrace
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-test-report
+          path: mobile-shield/core/build/reports/tests/jvmTest
+          if-no-files-found: ignore

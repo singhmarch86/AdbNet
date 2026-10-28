@@ -34,7 +34,9 @@ object ForegroundAppDetector {
         var latest: String? = null
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
+            // ACTIVITY_RESUMED is the non-deprecated successor to
+            // MOVE_TO_FOREGROUND and shares its value, so this works on API 26+.
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                 latest = event.packageName
             }
         }
