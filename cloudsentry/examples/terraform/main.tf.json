@@ -1,0 +1,46 @@
+{
+  "resource": {
+    "aws_s3_bucket": {
+      "public_data": {
+        "bucket": "my-public-data",
+        "acl": "public-read"
+      },
+      "secure_data": {
+        "bucket": "my-secure-data",
+        "acl": "private",
+        "server_side_encryption_configuration": {"rule": {}},
+        "versioning": {"enabled": true},
+        "tags": {"owner": "platform"}
+      }
+    },
+    "aws_security_group": {
+      "open_ssh": {
+        "name": "open-ssh",
+        "ingress": [
+          {"from_port": 22, "to_port": 22, "protocol": "tcp", "cidr_blocks": ["0.0.0.0/0"]}
+        ]
+      }
+    },
+    "aws_db_instance": {
+      "public_db": {
+        "publicly_accessible": true,
+        "storage_encrypted": false,
+        "password": "SuperSecretPassw0rd"
+      }
+    },
+    "google_storage_bucket": {
+      "legacy_bucket": {
+        "name": "legacy-bucket",
+        "uniform_bucket_level_access": false
+      }
+    },
+    "google_compute_firewall": {
+      "allow_rdp": {
+        "name": "allow-rdp",
+        "direction": "INGRESS",
+        "source_ranges": ["0.0.0.0/0"],
+        "allow": [{"protocol": "tcp", "ports": ["3389"]}]
+      }
+    }
+  }
+}

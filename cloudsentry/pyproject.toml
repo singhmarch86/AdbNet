@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloudsentry"
+version = "0.1.0"
+description = "Multi-cloud security posture and Infrastructure-as-Code scanner (AWS, GCP, Terraform)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+
+# Core (IaC-from-JSON + engine) needs nothing beyond the standard library.
+dependencies = []
+
+[project.optional-dependencies]
+# Parse raw .tf (HCL) files, not just .tf.json / terraform-show JSON.
+hcl = ["python-hcl2>=4.3"]
+# Live cloud scanning.
+aws = ["boto3>=1.26"]
+gcp = ["google-cloud-storage>=2.0", "google-cloud-compute>=1.0"]
+dev = ["pytest>=7"]
+all = ["python-hcl2>=4.3", "boto3>=1.26", "google-cloud-storage>=2.0", "google-cloud-compute>=1.0"]
+
+[project.scripts]
+cloudsentry = "cloudsentry.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cloudsentry*"]

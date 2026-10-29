@@ -1,0 +1,13 @@
+# Core engine + IaC-from-JSON scanning needs NOTHING here (stdlib only).
+# Install extras only for the capabilities you want:
+#
+#   pip install -e .[hcl]   # parse raw .tf (HCL) files
+#   pip install -e .[aws]   # live AWS scanning
+#   pip install -e .[gcp]   # live GCP scanning
+#   pip install -e .[all]   # everything
+#
+# Pinned references for a manual (non-editable) install:
+python-hcl2>=4.3
+boto3>=1.26
+google-cloud-storage>=2.0
+google-cloud-compute>=1.0
